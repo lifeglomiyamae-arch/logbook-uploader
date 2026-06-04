@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>航海日誌システム</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Bebas+Neue&display=swap');
+:root {
+  --navy:#0a1628;--accent:#00aaff;--accent2:#00d4aa;--text:#e8f0f8;
+  --muted:#7a9bbf;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
+  --border:rgba(0,170,255,0.2);--danger:#ff4444;--radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse at 20% 50%,rgba(0,100,200,0.15) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(0,212,170,0.08) 0%,transparent 50%);}
+header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;
+  background:rgba(10,22,40,0.9);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:1px;}
+.voyage-badge{background:rgba(0,212,170,0.15);border:1px solid rgba(0,212,170,0.3);color:var(--accent2);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;display:none;}
+.screen{display:none;max-width:680px;margin:0 auto;padding:28px 20px 80px;}
+.screen.active{display:block;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+.card-label{font-size:11px;font-weight:700;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;}
+.entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+@media(max-width:480px){.entry-grid{grid-template-columns:1fr;}}
+.entry-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.25s;}
+.entry-card:hover{border-color:var(--accent);background:rgba(0,170,255,0.08);transform:translateY(-3px);}
+.entry-card-icon{font-size:38px;margin-bottom:12px;}
+.entry-card-title{font-size:15px;font-weight:700;margin-bottom:6px;}
+.entry-card-sub{font-size:12px;color:var(--muted);line-height:1.6;}
+.form-group{margin-bottom:14px;}
+.form-label{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.req{background:rgba(255,80,80,0.2);color:#ff8080;font-size:10px;padding:1px 6px;border-radius:4px;}
+.opt{background:rgba(122,155,191,0.15);color:var(--muted);font-size:10px;padding:1px 6px;border-radius:4px;}
+input[type="text"],input[type="datetime-local"],input[type="date"],select,textarea{
+  width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);color:var(--text);
+  padding:11px 14px;border-radius:8px;font-family:'Noto Sans JP',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s;appearance:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+input::placeholder,textarea::placeholder{color:var(--muted);}
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.7);cursor:pointer;}
+textarea{resize:vertical;min-height:80px;line-height:1.6;}
+.select-wrap{position:relative;}
+.select-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
+.auto-field{background:rgba(0,212,170,0.05);border-color:rgba(0,212,170,0.2);color:var(--accent2);cursor:default;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:480px){.form-row{grid-template-columns:1fr;}}
+.spinner-wrap{display:flex;align-items:center;}
+.spinner-btn{width:40px;height:42px;background:rgba(0,170,255,0.1);border:1px solid var(--border);color:var(--accent);font-size:18px;cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:center;}
+.spinner-btn:first-child{border-radius:8px 0 0 8px;border-right:none;}
+.spinner-btn:last-child{border-radius:0 8px 8px 0;border-left:none;}
+.spinner-btn:hover{background:rgba(0,170,255,0.2);}
+.spinner-input{flex:1;border-radius:0!important;text-align:center;font-weight:700;font-size:16px!important;}
+.btn{padding:13px 24px;border-radius:10px;font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;border:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;width:100%;font-size:15px;}
+.btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,170,255,0.3);}
+.btn-primary:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.btn-secondary{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-back{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:6px;margin-bottom:20px;}
+.btn-back:hover{color:var(--accent);}
+.sec-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.sec-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.sec-title{font-size:15px;font-weight:700;}
+.sec-sub{font-size:12px;color:var(--muted);}
+#drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:36px 20px;text-align:center;cursor:pointer;transition:all 0.25s;position:relative;}
+#drop-zone:hover,#drop-zone.dragover{border-color:var(--accent);background:rgba(0,170,255,0.05);}
+#drop-zone.has-files{border-color:var(--accent2);background:rgba(0,212,170,0.05);}
+.drop-icon{font-size:36px;margin-bottom:10px;opacity:0.7;}
+.drop-title{font-size:14px;font-weight:500;margin-bottom:4px;}
+.drop-sub{font-size:12px;color:var(--muted);}
+#file-input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+#preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:10px;margin-top:14px;}
+.preview-item{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+.preview-item img{width:100%;height:100%;object-fit:cover;}
+.preview-remove{position:absolute;top:3px;right:3px;width:20px;height:20px;background:rgba(0,0,0,0.75);border:none;border-radius:50%;color:white;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.preview-name{font-size:10px;color:var(--muted);text-align:center;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.progress-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.progress-item:last-child{border-bottom:none;}
+.prog-status{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;font-weight:700;}
+.s-wait{background:rgba(122,155,191,0.2);color:var(--muted);}
+.s-up{background:rgba(0,170,255,0.2);color:var(--accent);animation:pulse 1s infinite;}
+.s-ok{background:rgba(0,212,170,0.2);color:var(--accent2);}
+.s-err{background:rgba(255,68,68,0.2);color:var(--danger);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.prog-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prog-msg{font-size:11px;color:var(--muted);}
+#google-login-btn{background:white;color:#333;border:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
+#google-login-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,0.4);}
+.auth-status{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);flex-wrap:wrap;}
+.user-avatar{width:28px;height:28px;border-radius:50%;border:2px solid var(--accent);}
+.btn-signout{background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;transition:all 0.2s;}
+.btn-signout:hover{border-color:var(--accent);color:var(--accent);}
+.folder-display{padding:12px;background:rgba(0,212,170,0.05);border:1px solid rgba(0,212,170,0.2);border-radius:8px;text-align:center;margin-top:14px;}
+.folder-display-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.folder-display-name{font-size:15px;font-weight:700;color:var(--accent2);}
+.token-row{display:flex;gap:8px;}
+.token-row input{flex:1;}
+.token-row button{background:rgba(0,170,255,0.1);border:1px solid var(--border);color:var(--accent);padding:0 16px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;transition:background 0.2s;}
+.token-row button:hover{background:rgba(0,170,255,0.2);}
+.info-box{background:rgba(0,170,255,0.05);border:1px solid rgba(0,170,255,0.2);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--muted);line-height:1.7;margin-top:10px;}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(20,40,70,0.95);border:1px solid var(--border);backdrop-filter:blur(10px);padding:12px 24px;border-radius:30px;font-size:13px;z-index:999;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.4);white-space:nowrap;}
+#toast.show{display:block;animation:fadeUp 0.3s ease;}
+#toast.success{border-color:var(--accent2);color:var(--accent2);}
+#toast.error{border-color:var(--danger);color:var(--danger);}
+@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+#loading-overlay{display:none;position:fixed;inset:0;background:rgba(10,22,40,0.85);backdrop-filter:blur(4px);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+#loading-overlay.show{display:flex;}
+.loading-spinner{width:48px;height:48px;border:3px solid rgba(0,170,255,0.2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:var(--muted);}
+/* 航海情報プレビュー */
+.voyage-preview{background:rgba(0,212,170,0.05);border:1px solid rgba(0,212,170,0.2);border-radius:8px;padding:14px;margin-top:14px;}
+.voyage-preview-title{font-size:11px;color:var(--muted);margin-bottom:8px;}
+.voyage-preview-row{display:flex;gap:8px;flex-wrap:wrap;}
+.vp-badge{background:rgba(0,170,255,0.1);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--accent);}
+.vp-none{color:var(--muted);font-size:12px;font-style:italic;}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚓</div>
+    <div>
+      <div class="logo-text">LOGBOOK</div>
+      <div class="logo-sub">航海日誌システム</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div id="voyage-badge" class="voyage-badge"></div>
+    <div id="header-auth"></div>
+  </div>
+</header>
+
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loading-text">処理中…</div>
+</div>
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen active">
+  <div class="card" style="margin-top:8px">
+    <div style="font-size:20px;font-weight:700;margin-bottom:8px">🔧 初期設定</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">初回のみ設定が必要です。入力内容はこの端末にのみ保存されます。</div>
+    <div class="form-group">
+      <div class="form-label">Notion APIトークン <span class="req">必須</span></div>
+      <div class="token-row">
+        <input type="password" id="setup-token" placeholder="ntn_xxxxxxxxxxxxxxxxxx">
+        <button onclick="toggleToken()">表示</button>
+      </div>
+      <div class="info-box">管理者から共有されたトークンを入力してください。このトークンはこの端末のみに保存されます。</div>
+    </div>
+    <div class="form-group" style="margin-top:16px">
+      <div class="form-label">あなたの名前 <span class="req">必須</span></div>
+      <input type="text" id="setup-name" placeholder="例：宮前博行">
+    </div>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="saveSetup()">設定を保存して開始 →</button>
+  </div>
+</div>
+
+<!-- ENTRY -->
+<div id="screen-entry" class="screen">
+  <div style="margin-bottom:24px">
+    <div style="font-size:22px;font-weight:700;margin-bottom:6px">何をしますか？</div>
+    <div style="font-size:13px;color:var(--muted)">操作を選択してください</div>
+  </div>
+  <div class="entry-grid">
+    <div class="entry-card" onclick="goNewVoyage()">
+      <div class="entry-card-icon">📋</div>
+      <div class="entry-card-title">新規航海記録</div>
+      <div class="entry-card-sub">新しい航海の記録を<br>Notionに登録する</div>
+    </div>
+    <div class="entry-card" onclick="goEditVoyage()">
+      <div class="entry-card-icon">✏️</div>
+      <div class="entry-card-title">既存記録を修正</div>
+      <div class="entry-card-sub">登録済みの記録を<br>修正・写真を追加する</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-bottom:16px">
+    <button class="btn btn-secondary" onclick="goScreen('screen-upload')">📤 写真アップロードのみ</button>
+  </div>
+  <div style="text-align:right">
+    <button style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer" onclick="goScreen('screen-setup')">⚙️ 設定変更</button>
+  </div>
+</div>
+
+<!-- NEW VOYAGE -->
+<div id="screen-new" class="screen">
+  <button class="btn-back" onclick="goScreen('screen-entry')">← 戻る</button>
+  <div class="sec-header">
+    <div class="sec-icon">📋</div>
+    <div><div class="sec-title">新規航海記録</div><div class="sec-sub">Notionに新しい記録を登録します</div></div>
+  </div>
+  <div class="card">
+    <div class="card-label">🚢 船舶</div>
+    <div class="form-group">
+      <div class="form-label">使用船舶 <span class="req">必須</span></div>
+      <div class="select-wrap">
+        <select id="new-vessel">
+          <option value="">── 読み込み中… ──</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">📅 航海基本情報</div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">出港日時 <span class="req">必須</span></div>
+        <input type="datetime-local" id="new-dep-time" oninput="calcDuration('new')">
+      </div>
+      <div class="form-group">
+        <div class="form-label">入港日時 <span class="req">必須</span></div>
+        <input type="datetime-local" id="new-arr-time" oninput="calcDuration('new')">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">出港地 <span class="req">必須</span></div>
+        <input type="text" id="new-dep-port" placeholder="例：高松港">
+      </div>
+      <div class="form-group">
+        <div class="form-label">入港地 <span class="req">必須</span></div>
+        <input type="text" id="new-arr-port" placeholder="例：高松港">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">総航行時間</div>
+      <input type="text" id="new-duration" class="auto-field" readonly placeholder="出港・入港日時から自動計算">
+    </div>
+    <div class="form-group">
+      <div class="form-label">訪問先・立ち寄り地 <span class="opt">任意</span></div>
+      <input type="text" id="new-stops" placeholder="例：直島、豊島">
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">👥 乗船者</div>
+    <div class="form-group">
+      <div class="form-label">船長名 <span class="req">必須</span></div>
+      <input type="text" id="new-captain" placeholder="例：宮前博行">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">乗組員名 <span class="opt">任意</span></div>
+        <input type="text" id="new-crew" placeholder="例：川島健">
+      </div>
+      <div class="form-group">
+        <div class="form-label">乗客・同乗者名 <span class="opt">任意</span></div>
+        <input type="text" id="new-passengers" placeholder="例：山田太郎">
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">🎯 航海内容</div>
+    <div class="form-group">
+      <div class="form-label">航海内容 <span class="req">必須</span></div>
+      <div class="select-wrap">
+        <select id="new-purpose">
+          <option value="">── 選択してください ──</option>
+          <option value="取引先接待">取引先接待</option>
+          <option value="福利厚生">福利厚生</option>
+          <option value="点検航海">点検航海</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">関連会社・取引先名 <span class="opt">任意</span></div>
+      <input type="text" id="new-company" placeholder="例：株式会社○○">
+    </div>
+    <div class="form-group">
+      <div class="form-label">補足説明 <span class="opt">任意</span></div>
+      <textarea id="new-notes" placeholder="特記事項があれば入力してください"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">📝 記録情報</div>
+    <div class="form-group">
+      <div class="form-label">記録者名</div>
+      <input type="text" id="new-recorder" readonly style="opacity:0.7">
+    </div>
+  </div>
+  <button class="btn btn-primary" id="btn-register" onclick="registerNewVoyage()">Notionに登録して写真アップロードへ →</button>
+</div>
+
+<!-- EDIT SELECT -->
+<div id="screen-edit-select" class="screen">
+  <button class="btn-back" onclick="goScreen('screen-entry')">← 戻る</button>
+  <div class="sec-header">
+    <div class="sec-icon">✏️</div>
+    <div><div class="sec-title">修正する航海記録を選択</div><div class="sec-sub">航海番号を指定してください</div></div>
+  </div>
+  <div class="card">
+    <div class="form-group">
+      <div class="form-label">年</div>
+      <div class="spinner-wrap">
+        <button class="spinner-btn" onclick="changeYear('edit',-1)">−</button>
+        <input type="text" class="spinner-input" id="edit-year" readonly>
+        <button class="spinner-btn" onclick="changeYear('edit',1)">+</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">連番</div>
+      <div class="spinner-wrap">
+        <button class="spinner-btn" onclick="changeSeq('edit',-1)">−</button>
+        <input type="text" class="spinner-input" id="edit-seq" readonly>
+        <button class="spinner-btn" onclick="changeSeq('edit',1)">+</button>
+      </div>
+    </div>
+    <div style="padding:14px;background:rgba(0,212,170,0.05);border:1px solid rgba(0,212,170,0.2);border-radius:8px;text-align:center;margin-top:4px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">選択中の航海番号</div>
+      <div style="font-size:24px;font-weight:700;color:var(--accent2);letter-spacing:2px" id="edit-num-display">----</div>
+    </div>
+    <!-- 航海情報プレビュー -->
+    <div id="edit-voyage-preview" class="voyage-preview" style="display:none">
+      <div class="voyage-preview-title">この航海の情報</div>
+      <div class="voyage-preview-row" id="edit-preview-badges"></div>
+    </div>
+    <div id="edit-voyage-notfound" style="display:none;margin-top:12px;text-align:center;font-size:13px;color:var(--muted);font-style:italic">
+      該当する航海記録が見つかりません
+    </div>
+  </div>
+  <button class="btn btn-primary" id="btn-load-edit" onclick="loadVoyageForEdit()" disabled>この記録を読み込んで修正する</button>
+</div>
+
+<!-- EDIT FORM -->
+<div id="screen-edit" class="screen">
+  <button class="btn-back" onclick="goScreen('screen-edit-select')">← 戻る</button>
+  <div class="sec-header">
+    <div class="sec-icon">✏️</div>
+    <div><div class="sec-title">航海記録を修正</div><div class="sec-sub" id="edit-subtitle"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-label">🚢 船舶</div>
+    <div class="form-group">
+      <div class="form-label">使用船舶</div>
+      <div class="select-wrap">
+        <select id="edit-vessel"></select>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">📅 航海基本情報</div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">出港日時</div>
+        <input type="datetime-local" id="edit-dep-time" oninput="calcDuration('edit')">
+      </div>
+      <div class="form-group">
+        <div class="form-label">入港日時</div>
+        <input type="datetime-local" id="edit-arr-time" oninput="calcDuration('edit')">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">出港地</div>
+        <input type="text" id="edit-dep-port">
+      </div>
+      <div class="form-group">
+        <div class="form-label">入港地</div>
+        <input type="text" id="edit-arr-port">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">総航行時間</div>
+      <input type="text" id="edit-duration" class="auto-field" readonly>
+    </div>
+    <div class="form-group">
+      <div class="form-label">訪問先・立ち寄り地</div>
+      <input type="text" id="edit-stops">
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">👥 乗船者</div>
+    <div class="form-group">
+      <div class="form-label">船長名</div>
+      <input type="text" id="edit-captain">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">乗組員名</div>
+        <input type="text" id="edit-crew">
+      </div>
+      <div class="form-group">
+        <div class="form-label">乗客・同乗者名</div>
+        <input type="text" id="edit-passengers">
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">🎯 航海内容</div>
+    <div class="form-group">
+      <div class="form-label">航海内容</div>
+      <div class="select-wrap">
+        <select id="edit-purpose">
+          <option value="">── 選択してください ──</option>
+          <option value="取引先接待">取引先接待</option>
+          <option value="福利厚生">福利厚生</option>
+          <option value="点検航海">点検航海</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">関連会社・取引先名</div>
+      <input type="text" id="edit-company">
+    </div>
+    <div class="form-group">
+      <div class="form-label">補足説明</div>
+      <textarea id="edit-notes"></textarea>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="btn-update" onclick="updateVoyage()">Notionを更新して写真アップロードへ →</button>
+</div>
+
+<!-- UPLOAD -->
+<div id="screen-upload" class="screen">
+  <button class="btn-back" onclick="goScreen('screen-entry')">← 戻る</button>
+  <div class="sec-header">
+    <div class="sec-icon">📤</div>
+    <div><div class="sec-title">写真アップロード</div><div class="sec-sub">Google Driveの航海フォルダに保存します</div></div>
+  </div>
+  <div class="card">
+    <div class="card-label">🔑 Googleアカウント</div>
+    <div id="google-auth-content">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Google Driveにアップロードするためにログインが必要です</div>
+      <button id="google-login-btn" onclick="handleGoogleSignIn()">
+        <svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/></svg>
+        Googleでログイン
+      </button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">⚓ 対象航海</div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">年</div>
+        <div class="spinner-wrap">
+          <button class="spinner-btn" onclick="changeYear('up',-1)">−</button>
+          <input type="text" class="spinner-input" id="up-year" readonly>
+          <button class="spinner-btn" onclick="changeYear('up',1)">+</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">連番</div>
+        <div class="spinner-wrap">
+          <button class="spinner-btn" onclick="changeSeq('up',-1)">−</button>
+          <input type="text" class="spinner-input" id="up-seq" readonly>
+          <button class="spinner-btn" onclick="changeSeq('up',1)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-label">出港日</div>
+      <input type="date" id="up-date" oninput="updateFolderDisplay()">
+    </div>
+    <div class="form-group">
+      <div class="form-label">船舶</div>
+      <div class="select-wrap">
+        <select id="up-vessel" onchange="updateFolderDisplay()">
+          <option value="FX27Z">FX27Z</option>
+        </select>
+      </div>
+    </div>
+    <div class="folder-display">
+      <div class="folder-display-label">アップロード先フォルダ</div>
+      <div class="folder-display-name" id="folder-display-name">----</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-label">🖼️ 写真選択</div>
+    <div id="drop-zone">
+      <input type="file" id="file-input" accept="image/*" multiple onchange="onFilesSelected(this.files)">
+      <div class="drop-icon">📷</div>
+      <div class="drop-title">写真をここにドロップ</div>
+      <div class="drop-sub">またはタップして選択（複数可）</div>
+    </div>
+    <div id="preview-grid"></div>
+  </div>
+  <button class="btn btn-primary" id="btn-upload" onclick="startUpload()" disabled>📤 Google Driveにアップロード</button>
+  <div class="card" id="progress-section" style="display:none;margin-top:16px">
+    <div class="card-label">📤 アップロード中</div>
+    <div id="progress-list"></div>
+  </div>
+  <div class="card" id="upload-complete" style="display:none;margin-top:16px;text-align:center;padding:32px">
+    <div style="font-size:48px;margin-bottom:12px">✅</div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:8px">アップロード完了！</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px" id="upload-complete-msg"></div>
+    <button class="btn btn-secondary" onclick="resetUpload()">続けてアップロード</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ===== CONFIG =====
+const NOTION_PROXY = 'https://notion-proxy.lifeglo-miyamae.workers.dev/notion';
+const NOTION_DB_ID = 'f1d85639e0464c56862a242ed03b17d6';
+const VESSEL_DB_ID = 'b661f08296a04eebad29a101fe54cef6';
+const GOOGLE_CLIENT_ID = '211611921174-aikijj2ijtkdjtbn2ovc7r3vg3p3kjg5.apps.googleusercontent.com';
+const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+// 船舶名 → Google Drive フォルダID マッピング
+const VESSEL_FOLDER_MAP = {
+  'FX27Z': '1GBa4aKhMaYGznW4ka3dl8meWARD7dbyY',
+};
+
+// ===== STATE =====
+let notionToken = '';
+let accessToken = null;
+let tokenClient = null;
+let selectedFiles = [];
+let editYear = new Date().getFullYear(), editSeq = 1;
+let upYear = new Date().getFullYear(), upSeq = 1;
+let currentEditPageId = null;
+let editPreviewTimer = null;
+let vesselList = []; // [{id, name}]
+
+// ===== INIT =====
+window.addEventListener('load', () => {
+  notionToken = localStorage.getItem('notion_token') || '';
+  const name = localStorage.getItem('user_name') || '';
+  if (notionToken && name) {
+    goScreen('screen-entry');
+    loadVessels();
+  } else {
+    goScreen('screen-setup');
+    if (notionToken) document.getElementById('setup-token').value = notionToken;
+    if (name) document.getElementById('setup-name').value = name;
+  }
+  updateSpinners();
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('dragover'); onFilesSelected(e.dataTransfer.files); });
+});
+
+function updateSpinners() {
+  document.getElementById('edit-year').value = editYear;
+  document.getElementById('edit-seq').value = String(editSeq).padStart(3,'0');
+  document.getElementById('edit-num-display').textContent = `${editYear}-${String(editSeq).padStart(3,'0')}`;
+  document.getElementById('up-year').value = upYear;
+  document.getElementById('up-seq').value = String(upSeq).padStart(3,'0');
+  updateFolderDisplay();
+}
+
+// ===== SCREENS =====
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ===== SETUP =====
+function toggleToken() { const i = document.getElementById('setup-token'); i.type = i.type==='password'?'text':'password'; }
+function saveSetup() {
+  const token = document.getElementById('setup-token').value.trim();
+  const name = document.getElementById('setup-name').value.trim();
+  if (!token) { showToast('Notion APIトークンを入力してください','error'); return; }
+  if (!name) { showToast('お名前を入力してください','error'); return; }
+  localStorage.setItem('notion_token', token);
+  localStorage.setItem('user_name', name);
+  notionToken = token;
+  showToast('設定を保存しました ✓','success');
+  loadVessels();
+  goScreen('screen-entry');
+}
+
+// ===== VESSEL =====
+async function loadVessels() {
+  try {
+    const data = await callNotion('POST', `databases/${VESSEL_DB_ID}/query`, { sorts:[{property:'船舶名',direction:'ascending'}] });
+    vesselList = (data.results||[]).map(p => ({
+      id: p.id,
+      name: p.properties['船舶名']?.title?.[0]?.plain_text || '不明'
+    }));
+    ['new-vessel','edit-vessel','up-vessel'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      sel.innerHTML = '<option value="">── 選択してください ──</option>';
+      vesselList.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = v.name;
+        sel.appendChild(opt);
+      });
+    });
+    updateFolderDisplay();
+  } catch(e) {
+    console.error('船舶読み込みエラー:', e);
+  }
+}
+
+function getVesselName(vesselId) {
+  const v = vesselList.find(v => v.id === vesselId);
+  return v ? v.name : '';
+}
+
+function getDriveFolderId(vesselName) {
+  return VESSEL_FOLDER_MAP[vesselName] || null;
+}
+
+// ===== NOTION API =====
+async function callNotion(method, endpoint, body) {
+  const url = `${NOTION_PROXY}/${endpoint}`;
+  const opts = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${notionToken}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || `Notion error: ${res.status}`);
+  return data;
+}
+
+// ===== DATETIME UTILS =====
+// JST datetime-local value → ISO string for Notion
+function localToISO(localStr) {
+  if (!localStr) return null;
+  // datetime-local value is already in local time, add JST offset (+09:00)
+  return localStr + ':00+09:00';
+}
+
+// Notion ISO string → datetime-local value (JST)
+function isoToLocal(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  // Convert to JST
+  const jst = new Date(d.getTime() + 9*60*60*1000);
+  return jst.toISOString().slice(0,16);
+}
+
+// ===== NEW VOYAGE =====
+function goNewVoyage() {
+  const name = localStorage.getItem('user_name') || '';
+  const captain = localStorage.getItem('last_captain') || name;
+  const depPort = localStorage.getItem('last_dep_port') || '';
+  const arrPort = localStorage.getItem('last_arr_port') || '';
+  const crew = localStorage.getItem('last_crew') || '';
+  const lastVessel = localStorage.getItem('last_vessel') || '';
+
+  const now = new Date();
+  const toLocal = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  document.getElementById('new-dep-time').value = toLocal(now);
+  document.getElementById('new-arr-time').value = '';
+  document.getElementById('new-dep-port').value = depPort;
+  document.getElementById('new-arr-port').value = arrPort;
+  document.getElementById('new-captain').value = captain;
+  document.getElementById('new-crew').value = crew;
+  document.getElementById('new-passengers').value = '';
+  document.getElementById('new-stops').value = '';
+  document.getElementById('new-company').value = '';
+  document.getElementById('new-notes').value = '';
+  document.getElementById('new-purpose').value = '';
+  document.getElementById('new-duration').value = '';
+  document.getElementById('new-recorder').value = name;
+  if (lastVessel) document.getElementById('new-vessel').value = lastVessel;
+  goScreen('screen-new');
+}
+
+function calcDuration(prefix) {
+  const dep = document.getElementById(`${prefix}-dep-time`).value;
+  const arr = document.getElementById(`${prefix}-arr-time`).value;
+  const el = document.getElementById(`${prefix}-duration`);
+  if (!dep || !arr) { el.value=''; return; }
+  const diff = Math.floor((new Date(arr)-new Date(dep))/60000);
+  if (diff<=0) { el.value=''; return; }
+  el.value = `${Math.floor(diff/60)}時間${diff%60>0?(diff%60)+'分':''}`;
+}
+
+async function registerNewVoyage() {
+  const dep = document.getElementById('new-dep-time').value;
+  const arr = document.getElementById('new-arr-time').value;
+  const depPort = document.getElementById('new-dep-port').value.trim();
+  const arrPort = document.getElementById('new-arr-port').value.trim();
+  const captain = document.getElementById('new-captain').value.trim();
+  const purpose = document.getElementById('new-purpose').value;
+  const vesselId = document.getElementById('new-vessel').value;
+
+  if (!vesselId) { showToast('使用船舶を選択してください','error'); return; }
+  if (!dep) { showToast('出港日時を入力してください','error'); return; }
+  if (!depPort) { showToast('出港地を入力してください','error'); return; }
+  if (!arrPort) { showToast('入港地を入力してください','error'); return; }
+  if (!captain) { showToast('船長名を入力してください','error'); return; }
+  if (!purpose) { showToast('航海内容を選択してください','error'); return; }
+
+  showLoading('Notionに登録中…');
+  try {
+    const voyageNum = await getNextVoyageNumber(dep);
+    const props = buildProps(voyageNum, {
+      dep, arr, depPort, arrPort, captain, vesselId,
+      crew: document.getElementById('new-crew').value.trim(),
+      passengers: document.getElementById('new-passengers').value.trim(),
+      stops: document.getElementById('new-stops').value.trim(),
+      purpose, company: document.getElementById('new-company').value.trim(),
+      notes: document.getElementById('new-notes').value.trim(),
+      recorder: document.getElementById('new-recorder').value.trim(),
+      duration: document.getElementById('new-duration').value,
+    });
+    await callNotion('POST', 'pages', { parent:{database_id:NOTION_DB_ID}, properties:props });
+
+    localStorage.setItem('last_dep_port', depPort);
+    localStorage.setItem('last_arr_port', arrPort);
+    localStorage.setItem('last_captain', captain);
+    localStorage.setItem('last_crew', document.getElementById('new-crew').value.trim());
+    localStorage.setItem('last_vessel', vesselId);
+
+    const depDate = dep.substring(0,10);
+    const vesselName = getVesselName(vesselId);
+    setUploadTarget(voyageNum, depDate, vesselName);
+    hideLoading();
+    showToast(`${voyageNum} を登録しました ✓`,'success');
+    goScreen('screen-upload');
+  } catch(e) {
+    hideLoading();
+    showToast('エラー: '+e.message,'error');
+  }
+}
+
+async function getNextVoyageNumber(depStr) {
+  const year = new Date(depStr).getFullYear();
+  try {
+    const data = await callNotion('POST', `databases/${NOTION_DB_ID}/query`, {
+      sorts:[{property:'航海番号',direction:'descending'}], page_size:100
+    });
+    const nums = (data.results||[])
+      .map(p => p.properties['航海番号']?.title?.[0]?.plain_text||'')
+      .filter(n => n.startsWith(year+'-'))
+      .map(n => parseInt(n.split('-')[1])||0);
+    const next = nums.length>0 ? Math.max(...nums)+1 : 1;
+    return `${year}-${String(next).padStart(3,'0')}`;
+  } catch { return `${year}-001`; }
+}
+
+function buildProps(voyageNum, d) {
+  const p = { '航海番号':{ title:[{text:{content:voyageNum}}] } };
+  const dt = s => s ? { date:{ start: localToISO(s) } } : null;
+  const rt = s => s ? { rich_text:[{text:{content:s}}] } : null;
+  if (dt(d.dep)) p['出港日時'] = dt(d.dep);
+  if (dt(d.arr)) p['入港日時'] = dt(d.arr);
+  if (rt(d.depPort)) p['出港地'] = rt(d.depPort);
+  if (rt(d.arrPort)) p['入港地'] = rt(d.arrPort);
+  if (rt(d.captain)) p['船長名'] = rt(d.captain);
+  if (rt(d.crew)) p['乗組員名'] = rt(d.crew);
+  if (rt(d.passengers)) p['乗客・同乗者名'] = rt(d.passengers);
+  if (rt(d.stops)) p['訪問先・立ち寄り地'] = rt(d.stops);
+  if (d.purpose) p['航海内容'] = {select:{name:d.purpose}};
+  if (rt(d.company)) p['関連会社・取引先名'] = rt(d.company);
+  if (rt(d.notes)) p['補足説明'] = rt(d.notes);
+  if (rt(d.recorder)) p['記録者名'] = rt(d.recorder);
+  if (rt(d.duration)) p['総航行時間'] = rt(d.duration);
+  if (d.vesselId) p['船舶'] = {relation:[{id:d.vesselId}]};
+  p['記録日時'] = {date:{start:new Date().toISOString()}};
+  return p;
+}
+
+// ===== EDIT =====
+function goEditVoyage() {
+  editYear = new Date().getFullYear(); editSeq = 1;
+  updateSpinners();
+  document.getElementById('edit-voyage-preview').style.display = 'none';
+  document.getElementById('edit-voyage-notfound').style.display = 'none';
+  document.getElementById('btn-load-edit').disabled = true;
+  goScreen('screen-edit-select');
+  // 初期プレビュー取得
+  fetchEditPreview();
+}
+
+function changeYear(ctx, d) {
+  if (ctx==='edit') {
+    editYear+=d;
+    document.getElementById('edit-year').value=editYear;
+    document.getElementById('edit-num-display').textContent=`${editYear}-${String(editSeq).padStart(3,'0')}`;
+    schedulePreviewFetch();
+  } else {
+    upYear+=d;
+    document.getElementById('up-year').value=upYear;
+    updateFolderDisplay();
+  }
+}
+function changeSeq(ctx, d) {
+  if (ctx==='edit') {
+    editSeq=Math.max(1,editSeq+d);
+    document.getElementById('edit-seq').value=String(editSeq).padStart(3,'0');
+    document.getElementById('edit-num-display').textContent=`${editYear}-${String(editSeq).padStart(3,'0')}`;
+    schedulePreviewFetch();
+  } else {
+    upSeq=Math.max(1,upSeq+d);
+    document.getElementById('up-seq').value=String(upSeq).padStart(3,'0');
+    updateFolderDisplay();
+  }
+}
+
+function schedulePreviewFetch() {
+  clearTimeout(editPreviewTimer);
+  document.getElementById('edit-voyage-preview').style.display='none';
+  document.getElementById('edit-voyage-notfound').style.display='none';
+  document.getElementById('btn-load-edit').disabled=true;
+  editPreviewTimer = setTimeout(fetchEditPreview, 600);
+}
+
+async function fetchEditPreview() {
+  const voyageNum = `${editYear}-${String(editSeq).padStart(3,'0')}`;
+  try {
+    const data = await callNotion('POST', `databases/${NOTION_DB_ID}/query`, {
+      filter:{property:'航海番号',title:{equals:voyageNum}}
+    });
+    if (!data.results?.length) {
+      document.getElementById('edit-voyage-preview').style.display='none';
+      document.getElementById('edit-voyage-notfound').style.display='block';
+      document.getElementById('btn-load-edit').disabled=true;
+      return;
+    }
+    const pp = data.results[0].properties;
+    const depDate = pp['出港日時']?.date?.start || '';
+    const depPort = pp['出港地']?.rich_text?.[0]?.plain_text || '';
+    const purpose = pp['航海内容']?.select?.name || '';
+    const captain = pp['船長名']?.rich_text?.[0]?.plain_text || '';
+    const badges = document.getElementById('edit-preview-badges');
+    badges.innerHTML = [
+      depDate ? `<span class="vp-badge">📅 ${depDate.substring(0,10)}</span>` : '',
+      depPort ? `<span class="vp-badge">⚓ ${depPort}</span>` : '',
+      purpose ? `<span class="vp-badge">🎯 ${purpose}</span>` : '',
+      captain ? `<span class="vp-badge">👤 ${captain}</span>` : '',
+    ].filter(Boolean).join('') || '<span class="vp-none">情報なし</span>';
+    document.getElementById('edit-voyage-preview').style.display='block';
+    document.getElementById('edit-voyage-notfound').style.display='none';
+    document.getElementById('btn-load-edit').disabled=false;
+  } catch(e) {
+    // silent
+  }
+}
+
+async function loadVoyageForEdit() {
+  const voyageNum = `${editYear}-${String(editSeq).padStart(3,'0')}`;
+  showLoading('記録を読み込み中…');
+  try {
+    const data = await callNotion('POST', `databases/${NOTION_DB_ID}/query`, {
+      filter:{property:'航海番号',title:{equals:voyageNum}}
+    });
+    if (!data.results?.length) { hideLoading(); showToast(`${voyageNum} が見つかりません`,'error'); return; }
+    const page = data.results[0];
+    currentEditPageId = page.id;
+    const pp = page.properties;
+    const grt = f => pp[f]?.rich_text?.[0]?.plain_text||'';
+
+    document.getElementById('edit-dep-time').value = isoToLocal(pp['出港日時']?.date?.start||'');
+    document.getElementById('edit-arr-time').value = isoToLocal(pp['入港日時']?.date?.start||'');
+    document.getElementById('edit-dep-port').value = grt('出港地');
+    document.getElementById('edit-arr-port').value = grt('入港地');
+    document.getElementById('edit-captain').value = grt('船長名');
+    document.getElementById('edit-crew').value = grt('乗組員名');
+    document.getElementById('edit-passengers').value = grt('乗客・同乗者名');
+    document.getElementById('edit-stops').value = grt('訪問先・立ち寄り地');
+    document.getElementById('edit-purpose').value = pp['航海内容']?.select?.name||'';
+    document.getElementById('edit-company').value = grt('関連会社・取引先名');
+    document.getElementById('edit-notes').value = grt('補足説明');
+    document.getElementById('edit-duration').value = grt('総航行時間');
+    // 船舶
+    const vesselRel = pp['船舶']?.relation?.[0]?.id||'';
+    if (vesselRel) document.getElementById('edit-vessel').value = vesselRel;
+    document.getElementById('edit-subtitle').textContent = `航海番号: ${voyageNum}`;
+    calcDuration('edit');
+    hideLoading(); goScreen('screen-edit');
+  } catch(e) { hideLoading(); showToast('読み込みエラー: '+e.message,'error'); }
+}
+
+async function updateVoyage() {
+  if (!currentEditPageId) { showToast('対象ページが不明です','error'); return; }
+  const voyageNum = `${editYear}-${String(editSeq).padStart(3,'0')}`;
+  showLoading('Notionを更新中…');
+  const dep = document.getElementById('edit-dep-time').value;
+  try {
+    const props = buildProps(voyageNum, {
+      dep, arr: document.getElementById('edit-arr-time').value,
+      depPort: document.getElementById('edit-dep-port').value.trim(),
+      arrPort: document.getElementById('edit-arr-port').value.trim(),
+      captain: document.getElementById('edit-captain').value.trim(),
+      crew: document.getElementById('edit-crew').value.trim(),
+      passengers: document.getElementById('edit-passengers').value.trim(),
+      stops: document.getElementById('edit-stops').value.trim(),
+      purpose: document.getElementById('edit-purpose').value,
+      company: document.getElementById('edit-company').value.trim(),
+      notes: document.getElementById('edit-notes').value.trim(),
+      duration: document.getElementById('edit-duration').value,
+      recorder: localStorage.getItem('user_name')||'',
+      vesselId: document.getElementById('edit-vessel').value,
+    });
+    await callNotion('PATCH', `pages/${currentEditPageId}`, {properties:props});
+    const depDate = dep ? dep.substring(0,10) : '';
+    const vesselName = getVesselName(document.getElementById('edit-vessel').value);
+    setUploadTarget(voyageNum, depDate, vesselName);
+    hideLoading(); showToast(`${voyageNum} を更新しました ✓`,'success');
+    goScreen('screen-upload');
+  } catch(e) { hideLoading(); showToast('更新エラー: '+e.message,'error'); }
+}
+
+// ===== UPLOAD TARGET =====
+function setUploadTarget(voyageNum, date, vesselName) {
+  const [y,s] = voyageNum.split('-');
+  upYear=parseInt(y); upSeq=parseInt(s);
+  document.getElementById('up-year').value=upYear;
+  document.getElementById('up-seq').value=String(upSeq).padStart(3,'0');
+  document.getElementById('up-date').value=date;
+  // 船舶選択
+  const upVessel = document.getElementById('up-vessel');
+  const opt = Array.from(upVessel.options).find(o => {
+    const name = getVesselName(o.value);
+    return name === vesselName;
+  });
+  if (opt) upVessel.value = opt.value;
+  updateFolderDisplay();
+  const badge = document.getElementById('voyage-badge');
+  badge.textContent=voyageNum; badge.style.display='inline-block';
+}
+
+function updateFolderDisplay() {
+  const year = document.getElementById('up-year')?.value||upYear;
+  const seq = document.getElementById('up-seq')?.value||String(upSeq).padStart(3,'0');
+  const date = (document.getElementById('up-date')?.value||'').replace(/-/g,'');
+  const vesselId = document.getElementById('up-vessel')?.value||'';
+  const vesselName = getVesselName(vesselId) || vesselId;
+  const name = date ? `${year}-${seq}_${date}` : `${year}-${seq}`;
+  document.getElementById('folder-display-name').textContent = vesselName ? `${vesselName} / ${name}` : name;
+  checkUploadReady();
+}
+
+// ===== GOOGLE AUTH =====
+const G_ICON = `<svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/></svg>`;
+
+function handleGoogleSignIn() {
+  if (!tokenClient) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID, scope: DRIVE_SCOPES,
+      callback: resp => {
+        if (resp.error) { showToast('ログイン失敗: '+resp.error,'error'); return; }
+        accessToken = resp.access_token;
+        fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:`Bearer ${accessToken}`}})
+          .then(r=>r.json()).then(user => {
+            document.getElementById('google-auth-content').innerHTML=`
+              <div class="auth-status">
+                <img class="user-avatar" src="${user.picture}" alt="">
+                <span style="color:var(--accent2);font-weight:500">${user.name}</span>
+                <span>でログイン中</span>
+                <button class="btn-signout" onclick="handleGoogleSignOut()">ログアウト</button>
+              </div>`;
+            checkUploadReady();
+            showToast('Googleにログインしました ✓','success');
+          });
+      }
+    });
+  }
+  tokenClient.requestAccessToken();
+}
+
+function handleGoogleSignOut() {
+  accessToken=null; tokenClient=null;
+  document.getElementById('google-auth-content').innerHTML=`
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Google Driveにアップロードするためにログインが必要です</div>
+    <button id="google-login-btn" onclick="handleGoogleSignIn()">${G_ICON} Googleでログイン</button>`;
+  checkUploadReady();
+}
+
+// ===== FILES =====
+function onFilesSelected(files) {
+  Array.from(files).forEach(f=>{if(!selectedFiles.find(sf=>sf.name===f.name&&sf.size===f.size))selectedFiles.push(f);});
+  renderPreviews(); checkUploadReady();
+}
+function removeFile(i){selectedFiles.splice(i,1);renderPreviews();checkUploadReady();}
+function renderPreviews(){
+  const grid=document.getElementById('preview-grid');
+  const dz=document.getElementById('drop-zone');
+  grid.innerHTML='';
+  if(!selectedFiles.length){dz.classList.remove('has-files');dz.querySelector('.drop-title').textContent='写真をここにドロップ';dz.querySelector('.drop-sub').textContent='またはタップして選択（複数可）';return;}
+  dz.classList.add('has-files');dz.querySelector('.drop-title').textContent=`${selectedFiles.length}枚選択済み`;dz.querySelector('.drop-sub').textContent='さらに追加するにはタップ';
+  selectedFiles.forEach((f,i)=>{const r=new FileReader();r.onload=e=>{const div=document.createElement('div');div.innerHTML=`<div class="preview-item"><img src="${e.target.result}" alt=""><button class="preview-remove" onclick="removeFile(${i})">×</button></div><div class="preview-name">${f.name}</div>`;grid.appendChild(div);};r.readAsDataURL(f);});
+}
+function checkUploadReady(){
+  const date=document.getElementById('up-date')?.value;
+  const vessel=document.getElementById('up-vessel')?.value;
+  const ready=accessToken&&date&&vessel&&selectedFiles.length>0;
+  const btn=document.getElementById('btn-upload');
+  if(btn)btn.disabled=!ready;
+}
+
+// ===== DRIVE UPLOAD =====
+async function startUpload() {
+  const year=document.getElementById('up-year').value;
+  const seq=document.getElementById('up-seq').value;
+  const date=document.getElementById('up-date').value.replace(/-/g,'');
+  const vesselId=document.getElementById('up-vessel').value;
+  const vesselName=getVesselName(vesselId);
+  const folderName=`${year}-${seq}_${date}`;
+  const parentFolderId=getDriveFolderId(vesselName);
+
+  if(!parentFolderId){showToast(`${vesselName}のDriveフォルダIDが未設定です`,'error');return;}
+
+  document.getElementById('btn-upload').disabled=true;
+  const ps=document.getElementById('progress-section');
+  const pl=document.getElementById('progress-list');
+  ps.style.display='block';
+  pl.innerHTML=selectedFiles.map((f,i)=>`<div class="progress-item"><div class="prog-status s-wait" id="ps-${i}">○</div><div class="prog-name">${f.name}</div><div class="prog-msg" id="pm-${i}">待機中</div></div>`).join('');
+
+  let folderId;
+  try{folderId=await getOrCreateFolder(folderName,parentFolderId);}
+  catch(e){showToast('フォルダ作成失敗: '+e.message,'error');document.getElementById('btn-upload').disabled=false;return;}
+
+  let ok=0;
+  for(let i=0;i<selectedFiles.length;i++){
+    setProg(i,'s-up','⟳','アップロード中…');
+    try{await uploadFile(selectedFiles[i],folderId);setProg(i,'s-ok','✓','完了');ok++;}
+    catch(e){setProg(i,'s-err','✗',e.message);}
+  }
+  document.getElementById('upload-complete').style.display='block';
+  document.getElementById('upload-complete-msg').textContent=`${ok}枚の写真を「${vesselName}/${folderName}」に保存しました`;
+}
+
+async function getOrCreateFolder(name,parentId){
+  const q=`name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`;
+  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`,{headers:{Authorization:`Bearer ${accessToken}`}});
+  const d=await r.json();
+  if(d.files?.length)return d.files[0].id;
+  const c=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[parentId]})});
+  const cd=await c.json();
+  if(!cd.id)throw new Error('作成失敗');
+  return cd.id;
+}
+
+async function uploadFile(file,folderId){
+  const form=new FormData();
+  form.append('metadata',new Blob([JSON.stringify({name:file.name,parents:[folderId]})],{type:'application/json'}));
+  form.append('file',file);
+  const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:`Bearer ${accessToken}`},body:form});
+  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||'失敗');}
+}
+
+function setProg(i,cls,icon,msg){document.getElementById(`ps-${i}`).className=`prog-status ${cls}`;document.getElementById(`ps-${i}`).textContent=icon;document.getElementById(`pm-${i}`).textContent=msg;}
+
+function resetUpload(){
+  selectedFiles=[];renderPreviews();
+  document.getElementById('progress-section').style.display='none';
+  document.getElementById('upload-complete').style.display='none';
+  document.getElementById('btn-upload').disabled=true;
+}
+
+// ===== UI =====
+function showLoading(msg='処理中…'){document.getElementById('loading-text').textContent=msg;document.getElementById('loading-overlay').classList.add('show');}
+function hideLoading(){document.getElementById('loading-overlay').classList.remove('show');}
+let toastTimer;
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='show '+(type||'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.className='';},3500);}
+</script>
+</body>
+</html>
